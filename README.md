@@ -16,8 +16,16 @@ Original JS Function Requiring A Callback:
 Using An Already Transformed Async Fucntion:
 
 	var myfunc = async.function(function(){
-  		async.await( setTimeOutAsync(3000) );
-  		alert("this is displayed after 3 seconds");
+  		async.await( setTimeOutAsync(5000) );
+  		alert("this is displayed after 5 seconds");
+		return "it works";
+	});
+	
+	var myfunc2 = async.function(function(){
+		var result = async.await( myfunc());
+		alert(result + "first time");
+		result = async.await( myfunc());
+		alert(result + "second time");
 	});
 	
 Limitations As Of The Current Version (Hope To Fixed Soon [Anyone anxious for it, is welcome to help implementing]):
@@ -25,9 +33,8 @@ Limitations As Of The Current Version (Hope To Fixed Soon [Anyone anxious for it
  	1. The async.await function must be in the outermost scope (i.e. it cannot be wrapped in a inner block, such as if/else, for/while, try/catch).
  	2. async.await and async.callback must be literal, an alias is not allowed, also it cannot be within an eval() string.
  	3. Having async.await or async.callback in a string, will mass up the function.
- 	4. There is currently no error handler for the awaited function.
- 	5. Returning from the code after async.await by using the return keyword (or throwing an excpetion) will prevent the caller code from being exceuted.
- 	6. It is not yet possible to return data, besides an original callback function which can get the first argument
+ 	4. There is currently no error handler for the awaited function. 	
+ 	5. For the original callback function, we can get so far only the first argument
  		Exmaple Using JQuery $.get:
  			var result = $.get("my/path", async.Stub);
  
