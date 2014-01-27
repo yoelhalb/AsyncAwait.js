@@ -1,6 +1,3 @@
-<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script> 
-<script>
-
 
 var async = {};
 async.savedCalls = {};
@@ -134,20 +131,5 @@ async.function = function Function(func){
 	async.savedCalls[a.toString()] = {};
 	//async.savedCalls[a] = {};
 	return a;
-	//TODE... we can add a EndAsync call as well as EndAllAsync, also we can provide BeginAsyncBlock and EndAsyncBlock (these will be used to execute something asynchronosly using setTimeOut())
+	//TODO... we can add a EndAsync call as well as EndAllAsync, also we can provide BeginAsyncBlock and EndAsyncBlock (these will be used to execute something asynchronosly using setTimeOut())
 }
-//var myFunc = async.function(function(){ async.await(alert(
-//"test"));});
-//alert(myFunc.toString());
-//var testing123 = async.function(function(){ async.await(setTimeout(async.callback, 3000)); alert("done")});
-//alert(testing123.toString());
-//testing123();
-//var setTimeOutAsync = async.function(function(args){ async.await(setTimeout(async.callback, args));});
-//alert(setTimeOutAsync.toString());
-//var testingTimeout = async.function(function(){
-//	async.await(setTimeOutAsync(2000));
-//	alert("test sucsseded");
-//});
-//alert(testingTimeout.toString());
-//testingTimeout();
-</script>
