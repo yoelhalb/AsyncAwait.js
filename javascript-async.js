@@ -1,4 +1,3 @@
-
 var async = {};
 async.savedCalls = {};
 async.function = function Function(func){
@@ -86,15 +85,15 @@ async.function = function Function(func){
 		var endParenCount = 0;
 		var foundFirst = false;
 		var found = false;
-		for(var i = (awaitIndexSecondPart + awaitCode.length); found == false; i++)
+		for(var j = (awaitIndexSecondPart + awaitCode.length); found == false; j++)
 		{
-			if(secondPartAsArray[i] == "(") startParenCount++;
-			if(secondPartAsArray[i] == ")") endParenCount++;
+			if(secondPartAsArray[j] == "(") startParenCount++;
+			if(secondPartAsArray[j] == ")") endParenCount++;
 			if(foundFirst && startParenCount == endParenCount){
 				parenCount = startParenCount;
 				awaitInnerExpressionStart = secondPartAsArray.indexOf("(") + 1;
-				awaitInnerExpressionEnd = i - 1;
-				awaitOuterExpressionEnd = i;
+				awaitInnerExpressionEnd = j - 1;
+				awaitOuterExpressionEnd = j;
 				found = true;
 			}
 			if(!foundFirst && startParenCount > 0) foundFirst = true;
@@ -105,7 +104,7 @@ async.function = function Function(func){
 		
 		//TODO... if it is in a clousure then cut, also if it is if while try catch finanly for, also it might be an argument to a function, it might be in the if or while condition or in the ternatery operator (but not in the case condition, we have to throw an error), and it might be to the right or left of a logical short circut eveluation (and what about bitwise??) or just a block...
 		var newStubName = "stub"+i.toString();
-		firstPart = firstPart.replace("this.Stub", newStubName);//To avoid coolisions		
+		firstPart = firstPart.replace(callbackCode, newStubName);//To avoid coolisions		
 		awaitPart = awaitPart.replace(callbackCode, newStubName);
 		
 		var callbackPart = secondPart.substring(awaitOuterExpressionEnd + 1, funcText.length);
