@@ -36,7 +36,7 @@ Limitations As Of The Current Version (Hope To Fixed Soon [Anyone anxious for it
  	4. There is currently no error handler for the awaited function. 	
  	5. For the original callback function, we can get so far only the first argument
  		Exmaple Using JQuery $.get:
- 			var result = $.get("my/path", async.Stub);
+ 			var result = $.get("my/path", async.callback;
  
  	
  
