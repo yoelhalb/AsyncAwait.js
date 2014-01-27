@@ -1,6 +1,7 @@
+
 var async = {};
 async.savedCalls = {};
-async.function = function Function(func){
+async.functionSetup = function (func, recurseCount){
 	var funcText = func.toString();
 	//TODO... the following has to be done in a loop
 	var awaitCode ="async.await";
@@ -65,67 +66,92 @@ async.function = function Function(func){
 				break;
 		}
 	}
-	//TODO... remove comments and strings	
-    for(var i = 0; i < 1/*funcText.indexOf(awaitCode) >= 0*/;i++)
+	//TODO... remove comments and strings
+
+	var awaitIndex = funcText.indexOf(awaitCode);
+	if(awaitIndex == -1) throw new Exception("no await found");
+	//TODO... we have to consider end brackets
+	var firstPart = funcText.substring(0, (funcText.substring(0,awaitIndex).lastIndexOf(";") >= 0 ? funcText.substring(0,awaitIndex).lastIndexOf(";") : funcText.substring(0,awaitIndex).lastIndexOf("{")) + 1);//TODO... what if he just terminated with a new line??? but we cannot look for a new line as the current line has all rights to be separated on two lines
+	var beforeAwaitPart = funcText.substring(firstPart.length, awaitIndex);	
+	
+	var secondPart = funcText.substring(awaitIndex,funcText.length);
+	var awaitIndexSecondPart = secondPart.indexOf(awaitCode);
+	var secondPartAsArray = secondPart.split("");
+	var parenCount = null;
+	var awaitInnerExpressionStart = null;
+	var awaitInnerExpressionEnd = null;
+	var awaitOuterExpressionEnd = null;
+	var startParenCount = 0;
+	var endParenCount = 0;
+	var foundFirst = false;
+	var found = false;
+	for(var j = (awaitIndexSecondPart + awaitCode.length); found == false; j++)
 	{
-		var awaitIndex = funcText.indexOf(awaitCode);
-		if(awaitIndex == -1) throw new Exception("no await found");
-		//TODO... we have to consider end brackets
-		var firstPart = funcText.substring(0, (funcText.substring(0,awaitIndex).lastIndexOf(";") >= 0 ? funcText.substring(0,awaitIndex).lastIndexOf(";") : funcText.substring(0,awaitIndex).lastIndexOf("{")) + 1);//TODO... what if he just terminated with a new line??? but we cannot look for a new line as the current line has all rights to be separated on two lines
-		var beforeAwaitPart = funcText.substring(firstPart.length, awaitIndex);	
-		
-		var secondPart = funcText.substring(awaitIndex,funcText.length);
-		var awaitIndexSecondPart = secondPart.indexOf(awaitCode);
-		var secondPartAsArray = secondPart.split("");
-		var parenCount = null;
-		var awaitInnerExpressionStart = null;
-		var awaitInnerExpressionEnd = null;
-		var awaitOuterExpressionEnd = null;
-		var startParenCount = 0;
-		var endParenCount = 0;
-		var foundFirst = false;
-		var found = false;
-		for(var j = (awaitIndexSecondPart + awaitCode.length); found == false; j++)
-		{
-			if(secondPartAsArray[j] == "(") startParenCount++;
-			if(secondPartAsArray[j] == ")") endParenCount++;
-			if(foundFirst && startParenCount == endParenCount){
-				parenCount = startParenCount;
-				awaitInnerExpressionStart = secondPartAsArray.indexOf("(") + 1;
-				awaitInnerExpressionEnd = j - 1;
-				awaitOuterExpressionEnd = j;
-				found = true;
-			}
-			if(!foundFirst && startParenCount > 0) foundFirst = true;
+		if(secondPartAsArray[j] == "(") startParenCount++;
+		if(secondPartAsArray[j] == ")") endParenCount++;
+		if(foundFirst && startParenCount == endParenCount){
+			parenCount = startParenCount;
+			awaitInnerExpressionStart = secondPartAsArray.indexOf("(") + 1;
+			awaitInnerExpressionEnd = j - 1;
+			awaitOuterExpressionEnd = j
+			found = true;
 		}
-		
-		var awaitPart = secondPart.substring(awaitInnerExpressionStart, awaitInnerExpressionEnd + 1);
-		var awaitFuncName = awaitPart.substring(0,awaitPart.indexOf("("));
-		
-		//TODO... if it is in a clousure then cut, also if it is if while try catch finanly for, also it might be an argument to a function, it might be in the if or while condition or in the ternatery operator (but not in the case condition, we have to throw an error), and it might be to the right or left of a logical short circut eveluation (and what about bitwise??) or just a block...
-		var newStubName = "stub"+i.toString();
-		firstPart = firstPart.replace(callbackCode, newStubName);//To avoid coolisions		
-		awaitPart = awaitPart.replace(callbackCode, newStubName);
-		
-		var callbackPart = secondPart.substring(awaitOuterExpressionEnd + 1, funcText.length);
-		callbackPart = callbackPart.replace(/(.*)}([^}]*)/,"$1$2");
-		callbackPart += ";for(var functionString in async.savedCalls[randomNameToTest1234567890.toString()]){ if(async.savedCalls[randomNameToTest1234567890.toString()][functionString]){ for(var callbackName in async.savedCalls[randomNameToTest1234567890.toString()][functionString]) {(async.savedCalls[randomNameToTest1234567890.toString()][functionString][callbackName])();}}}";//TODO... handle returns
-		callbackPart += "}";		
-		
-		//So far we support only a single callback
-		callbackPart = callbackPart.replace(/(.*)}([^}]*)/,"$1$2; if(async.savedCalls["+awaitFuncName+".toString()] && async.savedCalls["+awaitFuncName+".toString()][randomNameToTest1234567890.toString()]){ async.savedCalls["+awaitFuncName+".toString()][randomNameToTest1234567890.toString()]['"+newStubName+"'] = null; }} ");//Register for the current call, and unregister when the callback completed
-			
-		callbackPart = "function (args){"+beforeAwaitPart+ " args; " + callbackPart; //Should have the closing bracket
-		
-		var intro = "var randomNameToTest1234567890 = arguments.callee; if(async.savedCalls["+awaitFuncName+".toString()] && !async.savedCalls["+awaitFuncName+".toString()][randomNameToTest1234567890.toString()]) { async.savedCalls["+awaitFuncName+".toString()][randomNameToTest1234567890.toString()] = {};}";
-		var secondIntro = "if(async.savedCalls["+awaitFuncName+".toString()] && async.savedCalls["+awaitFuncName+".toString()][randomNameToTest1234567890.toString()]){ async.savedCalls["+awaitFuncName+".toString()][randomNameToTest1234567890.toString()]['"+newStubName+"'] = "+newStubName+"; } ";
-		firstPart = firstPart.replace("{", "{" + intro + "var " + newStubName+" = "+callbackPart + ";" + secondIntro );
-		
-		funcText = firstPart + " ; " + awaitPart + "; }";//We are embedding it as a clausure, so it will have access to all local variables
-		//TODO... put back the strings
-		
-		
+		if(!foundFirst && startParenCount > 0) foundFirst = true;
 	}
+	
+	var awaitPart = secondPart.substring(awaitInnerExpressionStart, awaitInnerExpressionEnd + 1);
+	var awaitFuncName = awaitPart.substring(0,awaitPart.indexOf("("));
+	
+	//TODO... if it is in a clousure then cut, also if it is if while try catch finanly for, also it might be an argument to a function, it might be in the if or while condition or in the ternatery operator (but not in the case condition, we have to throw an error), and it might be to the right or left of a logical short circut eveluation (and what about bitwise??) or just a block...
+	var newStubName = "stub"+recurseCount.toString();
+	firstPart = firstPart.replace(callbackCode, newStubName);//To avoid coolisions		
+	awaitPart = awaitPart.replace(callbackCode, newStubName);
+	
+	var callbackPart = secondPart.substring(awaitOuterExpressionEnd + 1, funcText.length);
+			
+	callbackPart = "function (argsFromAsyncOperation1234567890){\n\
+									"+beforeAwaitPart+ " argsFromAsyncOperation1234567890;\n\
+									" + callbackPart; //Should have the closing bracket
+	var callbackMainHandler = 
+   "function(argsFromAsyncOperation1234567890){\n \
+		//Note we do not call the callbackpart directly, because we want to be able to return results for callers\n\
+		var resultFromAsyncOperationCallBack1234567890 = ("+callbackPart+ ")(argsFromAsyncOperation1234567890) ;\n\
+		//Call the callback if any\n\
+		if(callbackFunc) callbackFunc(resultFromAsyncOperationCallBack1234567890);\n\
+	}\n";
+		
+		
+	
+	var intro = "\n\
+	//First thing capture the callback, note that this might not work in a multithreaded enviroment \n\
+	var callbackFunc = null;\n\
+	if(async.savedCalls[arguments.callee]) callbackFunc =  async.savedCalls[arguments.callee];\n\
+";
+	if(callbackMainHandler.indexOf(awaitCode) >= 0){
+		var beginningPart = callbackMainHandler.substring(0, callbackMainHandler.indexOf(awaitCode));
+		//TODO... we will have to change when we will add support for inner blocks
+		var beginnigIndex = beginningPart.lastIndexOf("function");//TODO... so far we assume that it will never be proceded with a } before awaitCode
+		beginningPart = callbackMainHandler.substring(0, beginnigIndex);//Rememeber that currently we don't handle inner scope
+		var endingPart = callbackMainHandler.substring(callbackMainHandler.indexOf(awaitCode));
+		var endingIndex = endingPart.indexOf("}");//see above
+		endingPart = endingPart.substring(endingIndex + 1);
+		var textToPass = callbackMainHandler.substring(beginnigIndex, callbackMainHandler.indexOf(awaitCode) + endingIndex + 1)
+		var recurseResult = async.functionSetup(textToPass, recurseCount + 1);
+		callbackMainHandler = beginningPart + recurseResult + endingPart;
+	}
+	var secondIntro = "if(async.savedCalls["+awaitFuncName+".toString()]){\n\
+							async.savedCalls["+awaitFuncName+".toString()] = "+newStubName+";\n\
+						} ";
+	firstPart = firstPart.replace("{", "{" + intro + "\nvar " + newStubName+" = "+callbackMainHandler + secondIntro );
+	
+	funcText = firstPart + " ;\n " + awaitPart + ";\n }";//We are embedding it as a clausure, so it will have access to all local variables
+	//TODO... put back the strings
+	document.write("<br><br>", funcText.replace(/\n/g, "<br>"));
+	return funcText;
+}
+	
+async.function = function(func){
+	var funcText = async.functionSetup(func,1);
 	eval("var a = " +funcText);
 	async.savedCalls[a.toString()] = {};	
 	return a;
