@@ -9,24 +9,26 @@ Sample Usage:
 
 Original JS Function Requiring A Callback:
 
-	var setTimeOutAsync = async.function(function(timeout){
-	 	async.await( setTimeOut(async.callback, args) );}
+	var setTimeoutAsync = async.function(function(timeout){
+	 	async.await( setTimeout(async.callback, timeout) );}
 	);
 
 Using An Already Transformed Async Fucntion:
 
 	var myfunc = async.function(function(){
-  		async.await( setTimeOutAsync(5000) );
+  		async.await( setTimeoutAsync(5000) );
   		alert("this is displayed after 5 seconds");
 		return "it works";
 	});
 	
 	var myfunc2 = async.function(function(){
 		var result = async.await( myfunc());
-		alert(result + "first time");
+		alert(result + " first time");
 		result = async.await( myfunc());
-		alert(result + "second time");
+		alert(result + " second time");
 	});
+	
+	myfunc2();
 	
 Limitations As Of The Current Version (Hope To Fixed Soon [Anyone anxious for it, is welcome to help implementing]):
    
