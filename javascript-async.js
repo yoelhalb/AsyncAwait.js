@@ -145,7 +145,6 @@ async.functionSetup = function (func, recurseCount){
 	
 	funcText = firstPart + " ;\n " + awaitPart + ";\n }";//We are embedding it as a clausure, so it will have access to all local variables
 	//TODO... put back the strings
-	document.write("<br><br>", funcText.replace(/\n/g, "<br>"));
 	return funcText;
 }
 	
