@@ -1,4 +1,3 @@
-
 var async = {};
 async.savedCalls = {};
 async.functionSetup = function (func, recurseCount){
@@ -130,10 +129,10 @@ async.functionSetup = function (func, recurseCount){
 	if(callbackMainHandler.indexOf(awaitCode) >= 0){
 		var beginningPart = callbackMainHandler.substring(0, callbackMainHandler.indexOf(awaitCode));
 		//TODO... we will have to change when we will add support for inner blocks
-		var beginnigIndex = beginningPart.lastIndexOf("function");//TODO... so far we assume that it will never be proceded with a } before awaitCode
+		var beginnigIndex = beginningPart.lastIndexOf("function");//TODO... so far assuming that there is no inline function in the code, which might not be true
 		beginningPart = callbackMainHandler.substring(0, beginnigIndex);//Rememeber that currently we don't handle inner scope
 		var endingPart = callbackMainHandler.substring(callbackMainHandler.indexOf(awaitCode));
-		var endingIndex = endingPart.indexOf("}");//see above
+		var endingIndex = endingPart.substring(0,endingPart.lastIndexOf("}")).lastIndexOf("}");//CAUTION: Any change to the structure of the callback might invalidate this
 		endingPart = endingPart.substring(endingIndex + 1);
 		var textToPass = callbackMainHandler.substring(beginnigIndex, callbackMainHandler.indexOf(awaitCode) + endingIndex + 1)
 		var recurseResult = async.functionSetup(textToPass, recurseCount + 1);
