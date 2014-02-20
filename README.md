@@ -39,6 +39,7 @@ Limitations As Of The Current Version (Hope To Fixed Soon [Anyone anxious for it
  	5. For the original callback function, we can get so far only the first argument
  		Exmaple Using JQuery $.get:
  			var result = async.await($.get("my/path", async.callback));
+	6. Please note that on the async.await statment before the call to async.await, only variable assigment is allowed and not any other operation (however within the parameters of async.await other operations are also allowed)
  
  	
  

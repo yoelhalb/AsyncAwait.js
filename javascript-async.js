@@ -2,76 +2,34 @@ var async = {};
 async.savedCalls = {};
 async.functionSetup = function (func, recurseCount){
 	var funcText = func.toString();
+	if(recurseCount == 1){
+		var stringArray = [];
+		funcText = async.removeCommentsAndStrings(funcText, stringArray);
+	}
 	//TODO... the following has to be done in a loop
 	var awaitCode ="async.await";
 	var callbackCode = "async.callback";
 	
-	var foundBackSlash = false;
-	var foundForwardSlash = false;
-	var inSingleLineComment = false;
-	var inMultiLineComment = false;
-	var inSingleQoutedString = false;
-	var inDoubleQoutedString = false;
-	var foundAsterisk = true;
-	var startOfString = null;
-	var stringArray = [];
-	var funcTextArray = funcText.split("");
-	var newFuncTextArray = [];
-	for(var i = 0; i < funcTextArray.length; i++){
-		switch(funcTextArray[i]){
-			case "/":
-				if(foundForwardSlash){ foundForwardSlash = false; inSingleLineComment = true;newFuncTextArray.pop();/*remove the last entry*/;foundBackSlash = false;foundAsterisk=false;}//found forward slash can be set only if we are not already in a comment
-				else if(inMultiLineComment && foundAsterisk){ foundAsterisk = false;inMultiLineComment=false; }
-				else if(!inSingleLineComment && !inMultiLineComment && !inSingleQoutedString && !inDoubleQoutedString){foundForwardSlash = true;newFuncTextArray.push("/");foundBackSlash = false;foundAsterisk=false;}
-				break;
-			case "\\":
-				foundForwardSlash = false; foundAsterisk = false;
-				if(inSingleQoutedString || inDoubleQoutedString){
-					if(foundBackSlash){ foundBackSlash = false;}
-					else { foundBackSlash = true;}
-				}
-				if(!inSingleLineComment && !inMultiLineComment && !inSingleQoutedString && !inDoubleQoutedString){ newFuncTextArray.push("\\");}
-				break;
-			case "*":
-				if(!inSingleLineComment && !inSingleQoutedString && !inDoubleQoutedString){
-					if(inMultiLineComment){ foundAsterisk = true; foundBackSlash = false; foundForwardSlash = false;}
-					else if(foundForwardSlash){ inMultiLineComment = true; foundForwardSlash = false; }
-					else { foundBackSlash = false;foundAsterisk = false;newFuncTextArray.push("*");}
-				}
-				break;
-			case "\n": 				
-				if(!inMultiLineComment && !inDoubleQoutedString && !inSingleQoutedString){newFuncTextArray.push("\n");}
-				inSingleLineComment = false;
-				foundAsterisk = false;
-				foundBackSlash = false;
-				foundForwardSlash = false;
-			case "\"":
-				if(inMultiLineComment || inSingleLineComment || inSingleQoutedString) { foundAsterisk = false; break;}
-				else if(inDoubleQoutedString && foundBackSlash){ foundBackSlash = false;}
-				else if(inDoubleQoutedString && !foundBackSlash){ inDoubleQoutedString = false;stringArray.push(funcText.substring(startOfString, i +1));startOfString = null;newFuncTextArray.push("#"+stringArray.length - 1);}
-				else { inDoubleQoutedString = true; startOfString = i; foundForwardSlash = false; foundBackSlash = false;foundAsterisk = false;}
-				break;
-			case "'":
-				if(inMultiLineComment || inSingleLineComment || inDoubleQoutedString) { foundAsterisk = false; break;}
-				else if(inSingleQoutedString && foundBackSlash){ foundBackSlash = false;}
-				else if(inSingleQoutedString && !foundBackSlash){ inSingleQoutedString = false;stringArray.push(funcText.substring(startOfString, i +1));startOfString = null;newFuncTextArray.push("#"+stringArray.length - 1);}
-				else { inSingleQoutedString = true; startOfString = i; foundForwardSlash = false; foundBackSlash = false;foundAsterisk = false;}
-				break;
-			default:
-				foundAsterisk = false;
-				foundBackSlash = false;
-				foundForwardSlash = false;
-				if(!inMultiLineComment && !inSingleLineComment&&!inDoubleQoutedString && !inSingleQoutedString){newFuncTextArray.push(funcTextArray[i]);}
-				break;
-		}
-	}
-	//TODO... remove comments and strings
-
+	
 	var awaitIndex = funcText.indexOf(awaitCode);
-	if(awaitIndex == -1) throw new Exception("no await found");
+	if(awaitIndex == -1) throw "no await found";
 	//TODO... we have to consider end brackets
-	var firstPart = funcText.substring(0, (funcText.substring(0,awaitIndex).lastIndexOf(";") >= 0 ? funcText.substring(0,awaitIndex).lastIndexOf(";") : funcText.substring(0,awaitIndex).lastIndexOf("{")) + 1);//TODO... what if he just terminated with a new line??? but we cannot look for a new line as the current line has all rights to be separated on two lines
-	var beforeAwaitPart = funcText.substring(firstPart.length, awaitIndex);	
+	var possibleDelimiters = ["{", "}", ";",
+							"[^=](\\s*)\\n",//If not the above then we check for a new line however we make sure it is not part of a statment
+							"(var)?((\\s*)(\\S+)(\\s*)=(\\s*))+"];//Otherwise we check for the begnningof the statment but since it is possible to have multiple equals signs we account for them 
+	for(var x = 0; x < possibleDelimiters.length;x++){
+		possibleDelimiters[x] += "(\\s*)"+awaitCode.replace(".","\\.");
+	}
+	var regExForStartStatment = new RegExp("("+possibleDelimiters.join("|")+")");
+	var result = regExForStartStatment.exec(funcText);
+    var endOfStatmentBeforeAwait = result.index;
+	var firstPart = funcText.substring(0, endOfStatmentBeforeAwait + (result[0].match("=") ?  0 : result[0].substring(0,result[0].match(awaitCode.replace(".","\\.")).index - 1).length));//If it contains a equal sign then the entire match is part of the await statment 
+	var beforeAwaitPart = funcText.substring(firstPart.length, awaitIndex);
+	if(result.length && result[0].match("(\\s*|;|{|})var\\s+")){		
+		firstPart += ";var "+result[0].match("(\\s*|;|{|})var\\s+(\\S+)")[2]+";";//Since this can have effect on the scope we make sure it is in the outer scope, actually we have to do this for every variable later (but not for variables declared in mozila in a let statment, or in a variable declared and intialized in a with or a catch statment)
+		beforeAwaitPart = beforeAwaitPart.substring(result[0].match("(\\s*|;|{|})var\\s")[0].length);
+	} 
+		
 	
 	var secondPart = funcText.substring(awaitIndex,funcText.length);
 	var awaitIndexSecondPart = secondPart.indexOf(awaitCode);
@@ -124,7 +82,7 @@ async.functionSetup = function (func, recurseCount){
 	var intro = "\n\
 	//First thing capture the callback, note that this might not work in a multithreaded enviroment \n\
 	var callbackFunc = null;\n\
-	if(async.savedCalls[arguments.callee]) callbackFunc =  async.savedCalls[arguments.callee];\n\
+	if(async.savedCalls[arguments.callee] && typeof(async.savedCalls[arguments.callee]) == 'function') callbackFunc =  async.savedCalls[arguments.callee];\n\
 ";
 	if(callbackMainHandler.indexOf(awaitCode) >= 0){
 		var beginningPart = callbackMainHandler.substring(0, callbackMainHandler.indexOf(awaitCode));
@@ -138,13 +96,17 @@ async.functionSetup = function (func, recurseCount){
 		var recurseResult = async.functionSetup(textToPass, recurseCount + 1);
 		callbackMainHandler = beginningPart + recurseResult + endingPart;
 	}
+	//TODO... how does this garantees to call the correct callback only?
 	var secondIntro = "if(async.savedCalls["+awaitFuncName+".toString()]){\n\
 							async.savedCalls["+awaitFuncName+".toString()] = "+newStubName+";\n\
 						} ";
 	firstPart = firstPart.replace("{", "{" + intro + "\nvar " + newStubName+" = "+callbackMainHandler + secondIntro );
 	
 	funcText = firstPart + " ;\n " + awaitPart + ";\n }";//We are embedding it as a clausure, so it will have access to all local variables
-	//TODO... put back the strings
+	//put back the strings
+	if(recurseCount == 1){
+		funcText = async.addBackStrings(funcText, stringArray);
+	}
 	return funcText;
 }
 	
@@ -154,4 +116,80 @@ async.function = function(func){
 	async.savedCalls[a.toString()] = {};	
 	return a;
 	//TODO... we can add a EndAsync call as well as EndAllAsync, also we can provide BeginAsyncBlock and EndAsyncBlock (these will be used to execute something asynchronosly using setTimeOut())
+}
+
+async.addBackStrings = function(funcText, stringArray){
+	var pattern = new RegExp("#([^#]*)#");
+	var result;
+	while(result = pattern.exec(funcText)){		 
+		var resultAsNum = result[1] - 0;
+		var str = stringArray[resultAsNum];
+		funcText = funcText.replace(pattern, str);		
+	}		
+	return funcText;
+}
+
+async.removeCommentsAndStrings = function(funcText, stringArray){
+	var foundBackSlash = false;
+	var foundForwardSlash = false;
+	var inSingleLineComment = false;
+	var inMultiLineComment = false;
+	var inSingleQoutedString = false;
+	var inDoubleQoutedString = false;
+	var foundAsterisk = true;
+	var startOfString = null;	
+	var funcTextArray = funcText.split("");
+	var newFuncTextArray = [];
+	for(var i = 0; i < funcTextArray.length; i++){
+		switch(funcTextArray[i]){
+			case "/":
+				if(foundForwardSlash){ foundForwardSlash = false; inSingleLineComment = true;newFuncTextArray.pop();/*remove the last entry*/;foundBackSlash = false;foundAsterisk=false;}//found forward slash can be set only if we are not already in a comment
+				else if(inMultiLineComment && foundAsterisk){ foundAsterisk = false;inMultiLineComment=false; }
+				else if(!inSingleLineComment && !inMultiLineComment && !inSingleQoutedString && !inDoubleQoutedString){foundForwardSlash = true;newFuncTextArray.push("/");foundBackSlash = false;foundAsterisk=false;}
+				break;
+			case "\\":
+				foundForwardSlash = false; foundAsterisk = false;
+				if(inSingleQoutedString || inDoubleQoutedString){
+					if(foundBackSlash){ foundBackSlash = false;}
+					else { foundBackSlash = true;}
+				}
+				if(!inSingleLineComment && !inMultiLineComment && !inSingleQoutedString && !inDoubleQoutedString){ newFuncTextArray.push("\\");}
+				break;
+			case "*":
+				if(!inSingleLineComment && !inSingleQoutedString && !inDoubleQoutedString){
+					if(inMultiLineComment){ foundAsterisk = true; foundBackSlash = false; foundForwardSlash = false;}
+					else if(foundForwardSlash){ inMultiLineComment = true; foundForwardSlash = false; }
+					else { foundBackSlash = false;foundAsterisk = false;newFuncTextArray.push("*");}
+				}
+				break;
+			case "\n": 				
+				if(!inMultiLineComment && !inDoubleQoutedString && !inSingleQoutedString){newFuncTextArray.push("\n");}
+				inSingleLineComment = false;
+				foundAsterisk = false;
+				foundBackSlash = false;
+				foundForwardSlash = false;
+				break;
+			case "\"":
+				if(inMultiLineComment || inSingleLineComment || inSingleQoutedString) { foundAsterisk = false; break;}
+				else if(inDoubleQoutedString && foundBackSlash){ foundBackSlash = false;}
+				else if(inDoubleQoutedString && !foundBackSlash){ inDoubleQoutedString = false;stringArray.push(funcText.substring(startOfString, i +1));startOfString = null;newFuncTextArray.push("#"+(stringArray.length - 1)+"#");}
+				else { inDoubleQoutedString = true; startOfString = i; foundForwardSlash = false; foundBackSlash = false;foundAsterisk = false;}
+				break;
+			case "'":
+				if(inMultiLineComment || inSingleLineComment || inDoubleQoutedString) { foundAsterisk = false; break;}
+				else if(inSingleQoutedString && foundBackSlash){ foundBackSlash = false;}
+				else if(inSingleQoutedString && !foundBackSlash){ inSingleQoutedString = false;stringArray.push(funcText.substring(startOfString, i +1));startOfString = null;newFuncTextArray.push("#"+(stringArray.length - 1)+"#");}
+				else { inSingleQoutedString = true; startOfString = i; foundForwardSlash = false; foundBackSlash = false;foundAsterisk = false;}
+				break;
+			default:
+				foundAsterisk = false;
+				foundBackSlash = false;
+				foundForwardSlash = false;
+				if(!inMultiLineComment && !inSingleLineComment&&!inDoubleQoutedString && !inSingleQoutedString){newFuncTextArray.push(funcTextArray[i]);}
+				break;
+		}
+	}
+	//TODO... remove comments and strings
+
+	return newFuncTextArray.join("");
 }
