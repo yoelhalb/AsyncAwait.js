@@ -40,6 +40,7 @@ Limitations As Of The Current Version (Hope To Fixed Soon [Anyone anxious for it
  		Exmaple Using JQuery $.get:
  			var result = async.await($.get("my/path", async.callback));
 	6. Please note that on the async.await statment before the call to async.await, only variable assigment is allowed and not any other operation (however within the parameters of async.await other operations are also allowed)
+	7. Also please note that any variable declared after the async.await statment (but not on the statment itself), will currently not have function scope, instead there scope is limited to the statments after the last async.await as well as the begnning of the last async.await statment (i.e. excluding the parameters to async.await)
  
  	
  
